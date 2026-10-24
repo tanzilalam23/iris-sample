@@ -1,0 +1,95 @@
+{
+  "mode": "dry-run (nothing was written to any database)",
+  "summary": {
+    "records_checked": 8,
+    "records_changed": 1,
+    "records_rejected": 2,
+    "records_kept_existing": 2,
+    "conflicts_kept_not_changed": 1,
+    "needs_review": 1,
+    "not_in_target": 1,
+    "no_source_position": 1,
+    "source_incomplete": 0,
+    "duplicate_source_id": 0,
+    "rejected_reasons": {
+      "latitude:not_numeric": 1,
+      "latitude:out_of_range": 1
+    }
+  },
+  "actions": [
+    {
+      "unit_id": "SEE9000000001",
+      "changed": true,
+      "conflict": false,
+      "reasons": [],
+      "proposed": {
+        "latitude": 48.123,
+        "longitude": 11.234
+      },
+      "action": "fill"
+    },
+    {
+      "unit_id": "SEE9000000002",
+      "changed": false,
+      "conflict": false,
+      "reasons": [],
+      "proposed": null,
+      "action": "keep_existing"
+    },
+    {
+      "unit_id": "SEE9000000003",
+      "changed": false,
+      "conflict": false,
+      "reasons": [],
+      "proposed": null,
+      "action": "no_source_position"
+    },
+    {
+      "unit_id": "SEE9000000004",
+      "changed": false,
+      "conflict": false,
+      "reasons": [
+        "latitude:out_of_range"
+      ],
+      "proposed": null,
+      "action": "rejected"
+    },
+    {
+      "unit_id": "SME9000000005",
+      "changed": false,
+      "conflict": false,
+      "reasons": [
+        "stored_latitude:ok",
+        "stored_longitude:missing"
+      ],
+      "proposed": null,
+      "action": "needs_review"
+    },
+    {
+      "unit_id": "SEE9000000006",
+      "changed": false,
+      "conflict": true,
+      "reasons": [],
+      "proposed": null,
+      "action": "keep_existing"
+    },
+    {
+      "unit_id": "SEE9000000007",
+      "changed": false,
+      "conflict": false,
+      "reasons": [],
+      "proposed": null,
+      "action": "not_in_target"
+    },
+    {
+      "unit_id": "SEE9000000008",
+      "changed": false,
+      "conflict": false,
+      "reasons": [
+        "latitude:not_numeric"
+      ],
+      "proposed": null,
+      "action": "rejected"
+    }
+  ]
+}

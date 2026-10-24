@@ -1,0 +1,5 @@
+record_type,prefix,units,linked,dangling_link,unlinked,positive_capacity,zero_capacity,null_capacity,invalid_capacity,precise,partial,missing,rejected,coord_value_missing,coord_value_not_numeric,coord_value_out_of_range,storage_ready_without_geometry,storage_objects,storage_positive_capacity,storage_zero_capacity,storage_null_capacity,storage_invalid_capacity,storage_linked_units,storage_with_multiple_units,storage_orphan
+unit,SEE,7,5,1,1,3,1,1,0,4,0,1,2,2,1,1,1,,,,,,,,
+unit,SME,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,,,,,,,,
+storage_object,SSE,,,,,,,,,,,,,,,,,5,3,1,1,0,5,1,1
+all_units,ALL,8,5,1,2,3,1,1,0,4,1,1,2,3,1,1,1,,,,,,,,

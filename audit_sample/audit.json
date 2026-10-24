@@ -1,0 +1,91 @@
+{
+  "note": "Computed from source records. Empty/NULL is never counted as 0. Field names are assumptions modelled on the MaStR bulk export; see README_MASTR_FIX.md.",
+  "overall": {
+    "units": 8,
+    "linked": 5,
+    "dangling_link": 1,
+    "unlinked": 2,
+    "positive_capacity": 3,
+    "zero_capacity": 1,
+    "null_capacity": 1,
+    "invalid_capacity": 0,
+    "precise": 4,
+    "partial": 1,
+    "missing": 1,
+    "rejected": 2,
+    "coord_value_missing": 3,
+    "coord_value_not_numeric": 1,
+    "coord_value_out_of_range": 1,
+    "storage_ready_without_geometry": 1
+  },
+  "by_prefix": {
+    "SEE": {
+      "units": 7,
+      "linked": 5,
+      "dangling_link": 1,
+      "unlinked": 1,
+      "positive_capacity": 3,
+      "zero_capacity": 1,
+      "null_capacity": 1,
+      "invalid_capacity": 0,
+      "precise": 4,
+      "partial": 0,
+      "missing": 1,
+      "rejected": 2,
+      "coord_value_missing": 2,
+      "coord_value_not_numeric": 1,
+      "coord_value_out_of_range": 1,
+      "storage_ready_without_geometry": 1
+    },
+    "SME": {
+      "units": 1,
+      "linked": 0,
+      "dangling_link": 0,
+      "unlinked": 1,
+      "positive_capacity": 0,
+      "zero_capacity": 0,
+      "null_capacity": 0,
+      "invalid_capacity": 0,
+      "precise": 0,
+      "partial": 1,
+      "missing": 0,
+      "rejected": 0,
+      "coord_value_missing": 1,
+      "coord_value_not_numeric": 0,
+      "coord_value_out_of_range": 0,
+      "storage_ready_without_geometry": 0
+    }
+  },
+  "storage_objects_by_prefix": {
+    "SSE": {
+      "storage_objects": 5,
+      "storage_positive_capacity": 3,
+      "storage_zero_capacity": 1,
+      "storage_null_capacity": 1,
+      "storage_invalid_capacity": 0,
+      "storage_linked_units": 5,
+      "storage_with_multiple_units": 1,
+      "storage_orphan": 1
+    }
+  },
+  "coordinate_value_reasons": {
+    "missing": 3,
+    "not_numeric": 1,
+    "out_of_range": 1
+  },
+  "relationships": {
+    "storage_objects": 5,
+    "storage_objects_by_capacity_status": {
+      "null": 1,
+      "positive": 3,
+      "zero": 1
+    },
+    "storage_objects_with_multiple_units": 1,
+    "max_units_per_storage_object": 2,
+    "orphan_storage_objects": 1,
+    "link_vs_list_mismatches": 0,
+    "duplicate_unit_ids": 0,
+    "capacity_kwh_counted_once_per_storage_object": 6551.0,
+    "capacity_kwh_naive_sum_per_unit": 11251.5
+  }
+}

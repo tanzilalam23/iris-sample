@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SYNTHETIC FIXTURE - not real MaStR data. All IDs and positions are invented.
+  Modelled on the MaStR bulk export file EinheitenStromSpeicher.xml.
+  Tag names follow the Gesamtdatenexport documentation, revision 26.2
+  (EinheitMastrNummer, Breitengrad, Laengengrad, SpeMaStRNummer).
+  The assessment brief's SME9/SEE9/SSE9 identifiers are kept as required;
+  the export documentation's own examples may use a different storage prefix.
+  Values are kept exactly as they would appear in the source (text, with
+  dot or comma decimals, blanks, bad values) - nothing is cleaned here.
+-->
+<EinheitenStromSpeicher>
+  <!-- 1: linked, 3-decimal position, comma decimal in longitude -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SEE9000000001</EinheitMastrNummer>
+    <Breitengrad>48.123</Breitengrad>
+    <Laengengrad>11,234</Laengengrad>
+    <SpeMaStRNummer>SSE9000000001</SpeMaStRNummer>
+  </EinheitStromSpeicher>
+  <!-- 2: same storage object as unit 1 (one storage, many units) -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SEE9000000002</EinheitMastrNummer>
+    <Breitengrad>50.5</Breitengrad>
+    <Laengengrad>7.1</Laengengrad>
+    <SpeMaStRNummer>SSE9000000001</SpeMaStRNummer>
+  </EinheitStromSpeicher>
+  <!-- 3: linked, positive capacity, position elements absent entirely -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SEE9000000003</EinheitMastrNummer>
+    <SpeMaStRNummer>SSE9000000002</SpeMaStRNummer>
+  </EinheitStromSpeicher>
+  <!-- 4: linked, capacity is a real zero, impossible latitude -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SEE9000000004</EinheitMastrNummer>
+    <Breitengrad>148,5</Breitengrad>
+    <Laengengrad>9.0</Laengengrad>
+    <SpeMaStRNummer>SSE9000000003</SpeMaStRNummer>
+  </EinheitStromSpeicher>
+  <!-- 5: migrated unit (SME), no storage link, blank longitude -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SME9000000005</EinheitMastrNummer>
+    <Breitengrad>-7.123</Breitengrad>
+    <Laengengrad>  </Laengengrad>
+  </EinheitStromSpeicher>
+  <!-- 6: generation unit without storage link (a "different" MaStR record) -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SEE9000000006</EinheitMastrNummer>
+    <Breitengrad>51.2</Breitengrad>
+    <Laengengrad>6.8</Laengengrad>
+    <SpeMaStRNummer/>
+  </EinheitStromSpeicher>
+  <!-- 7: link points to a storage object that is NOT in the storage file -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SEE9000000007</EinheitMastrNummer>
+    <Breitengrad>52.0</Breitengrad>
+    <Laengengrad>8.0</Laengengrad>
+    <SpeMaStRNummer>SSE9000000099</SpeMaStRNummer>
+  </EinheitStromSpeicher>
+  <!-- 8: linked, storage capacity missing in source, non-numeric latitude -->
+  <EinheitStromSpeicher>
+    <EinheitMastrNummer>SEE9000000008</EinheitMastrNummer>
+    <Breitengrad>abc</Breitengrad>
+    <Laengengrad>9.9</Laengengrad>
+    <SpeMaStRNummer>SSE9000000004</SpeMaStRNummer>
+  </EinheitStromSpeicher>
+</EinheitenStromSpeicher>

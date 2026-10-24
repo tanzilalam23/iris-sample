@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SYNTHETIC FIXTURE - not real MaStR data. All IDs and values are invented.
+  Modelled on the MaStR bulk export file AnlagenStromSpeicher.xml.
+  Tag names (MaStRNummer, NutzbareSpeicherkapazitaet,
+  VerknuepfteEinheitenMaStRNummern) and the comma-separated list format follow
+  the Gesamtdatenexport documentation, revision 26.2.
+-->
+<AnlagenStromSpeicher>
+  <!-- one storage object, two linked units (1-to-many) -->
+  <AnlageStromSpeicher>
+    <MaStRNummer>SSE9000000001</MaStRNummer>
+    <NutzbareSpeicherkapazitaet>5000.5</NutzbareSpeicherkapazitaet>
+    <VerknuepfteEinheitenMaStRNummern>SEE9000000001,SEE9000000002</VerknuepfteEinheitenMaStRNummern>
+  </AnlageStromSpeicher>
+  <!-- German-style capacity, one linked unit -->
+  <AnlageStromSpeicher>
+    <MaStRNummer>SSE9000000002</MaStRNummer>
+    <NutzbareSpeicherkapazitaet>1.250,5</NutzbareSpeicherkapazitaet>
+    <VerknuepfteEinheitenMaStRNummern>SEE9000000003</VerknuepfteEinheitenMaStRNummern>
+  </AnlageStromSpeicher>
+  <!-- real zero capacity: must not be treated as NULL -->
+  <AnlageStromSpeicher>
+    <MaStRNummer>SSE9000000003</MaStRNummer>
+    <NutzbareSpeicherkapazitaet>0</NutzbareSpeicherkapazitaet>
+    <VerknuepfteEinheitenMaStRNummern>SEE9000000004</VerknuepfteEinheitenMaStRNummern>
+  </AnlageStromSpeicher>
+  <!-- capacity element absent: NULL, not 0 -->
+  <AnlageStromSpeicher>
+    <MaStRNummer>SSE9000000004</MaStRNummer>
+    <VerknuepfteEinheitenMaStRNummern>SEE9000000008</VerknuepfteEinheitenMaStRNummern>
+  </AnlageStromSpeicher>
+  <!-- storage object that no unit references -->
+  <AnlageStromSpeicher>
+    <MaStRNummer>SSE9000000005</MaStRNummer>
+    <NutzbareSpeicherkapazitaet>300</NutzbareSpeicherkapazitaet>
+    <VerknuepfteEinheitenMaStRNummern/>
+  </AnlageStromSpeicher>
+</AnlagenStromSpeicher>

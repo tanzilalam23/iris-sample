@@ -1,0 +1,9 @@
+unit_id,prefix,storage_id,link_status,capacity_kwh,capacity_status,latitude,longitude,latitude_reason,longitude_reason,location_quality,storage_ready_without_geometry
+SEE9000000001,SEE,SSE9000000001,linked,5000.5,positive,48.123,11.234,,,precise,False
+SEE9000000002,SEE,SSE9000000001,linked,5000.5,positive,50.5,7.1,,,precise,False
+SEE9000000003,SEE,SSE9000000002,linked,1250.5,positive,,,missing,missing,missing,True
+SEE9000000004,SEE,SSE9000000003,linked,0.0,zero,,9.0,out_of_range,,rejected,False
+SME9000000005,SME,,unlinked,,no_storage_object,-7.123,,,missing,partial,False
+SEE9000000006,SEE,,unlinked,,no_storage_object,51.2,6.8,,,precise,False
+SEE9000000007,SEE,SSE9000000099,dangling_link,,no_storage_object,52.0,8.0,,,precise,False
+SEE9000000008,SEE,SSE9000000004,linked,,null,,9.9,not_numeric,,rejected,False
