@@ -6,6 +6,7 @@ from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
 from app.database.models.energy_asset import EnergyAsset
+from app.mastr_quality.coordinates import parse_coordinate
 
 
 logger = logging.getLogger(__name__)
@@ -74,9 +75,11 @@ class MaStRParser:
 
         status = record.get("status") or {}
 
-        # Coordinates are stored inside the location object
-        latitude = location.get("latitude")
-        longitude = location.get("longitude")
+        # Validate coordinates before storing or creating geometry.
+        latitude_result = parse_coordinate(location.get("latitude"), "lat")
+        longitude_result = parse_coordinate(location.get("longitude"), "lon")
+        latitude = latitude_result.value
+        longitude = longitude_result.value
 
         geometry = None
 

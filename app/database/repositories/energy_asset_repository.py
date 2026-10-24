@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from geoalchemy2 import Geography
 
 from app.database.models.energy_asset import EnergyAsset
+from app.mastr_quality.coordinates import parse_coordinate
 from app.database.repositories.base_repository import BaseRepository
 
 
@@ -245,9 +246,40 @@ class EnergyAssetRepository(BaseRepository[EnergyAsset]):
 
         existing.status = incoming.status
 
-        existing.latitude = incoming.latitude
-        existing.longitude = incoming.longitude
+        # Treat coordinates and geometry as one position.
+        # Never automatically overwrite a stored or partial position.
+        existing_lat = parse_coordinate(existing.latitude, "lat")
+        existing_lon = parse_coordinate(existing.longitude, "lon")
+        incoming_lat = parse_coordinate(incoming.latitude, "lat")
+        incoming_lon = parse_coordinate(incoming.longitude, "lon")
 
-        existing.geometry = incoming.geometry
+        existing_pair_is_valid = (
+            existing_lat.reason is None and existing_lon.reason is None
+        )
+        existing_has_any_position = (
+            existing.latitude is not None
+            or existing.longitude is not None
+            or existing.geometry is not None
+        )
+        incoming_position_is_valid = (
+            incoming_lat.reason is None
+            and incoming_lon.reason is None
+            and incoming.geometry is not None
+        )
+
+        if existing_pair_is_valid:
+            # Fill missing geometry only if the coordinates match.
+            if (
+                existing.geometry is None
+                and incoming_position_is_valid
+                and incoming_lat.value == existing_lat.value
+                and incoming_lon.value == existing_lon.value
+            ):
+                existing.geometry = incoming.geometry
+        elif not existing_has_any_position and incoming_position_is_valid:
+            # Only fill a completely empty position with a valid complete one.
+            existing.latitude = incoming_lat.value
+            existing.longitude = incoming_lon.value
+            existing.geometry = incoming.geometry
 
         return existing

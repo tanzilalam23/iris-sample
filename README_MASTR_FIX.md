@@ -1,9 +1,9 @@
 # IRIS-48H-01 — MaStR coordinate parsing and storage classification
 
 A tested, non-destructive vertical slice. One deterministic fixture, one code path.
-No database access, no scraping, no credentials, no invented coordinates.
+No database access, no scraping, no credentials, no fabricated production coordinates.
 
-## What this adds (all new files; no existing file was modified)
+## What this change contains (quality tools and integration updates)
 
 | File | Purpose |
 |---|---|
@@ -12,7 +12,10 @@ No database access, no scraping, no credentials, no invented coordinates.
 | `app/mastr_quality/xml_adapter.py` | Reads MaStR bulk-export style XML into dicts, source text preserved; `to_pipeline_record()` adapter |
 | `app/mastr_quality/audit.py` | Audit by source prefix, storage link, capacity, location quality (JSON + CSV) |
 | `app/mastr_quality/dry_run.py` | Dry-run repair plan (changed / rejected / kept), idempotent, never overwrites a valid position |
-| `tests/mastr_quality/` | pytest suite (parsers, adapter, audit, dry-run) |
+| `app/transformers/mastr_transformer.py` | Parses and validates source coordinates during transformation |
+| `app/parsers/mastr_parser.py` | Validates coordinates before creating geometry |
+| `app/database/repositories/energy_asset_repository.py` | Protects existing positions during entity updates |
+| `tests/mastr_quality/` | pytest suite (parsers, adapter, audit, dry-run, integration) |
 | `tests/fixtures/` | Synthetic XML fixtures + a synthetic "current table state" JSON |
 | `audit_sample/` | Output of the audit and dry-run on the fixtures |
 | `pytest.ini` | Makes `pytest` look only in `tests/` (the repo's top-level `test_map_renderer.py` is a manual database script) |
@@ -23,16 +26,16 @@ No database access, no scraping, no credentials, no invented coordinates.
 copies `Breitengrad` / `Laengengrad` unchanged and `app/parsers/mastr_parser.py` only checks
 `is not None` before building a `Point`. So the generic-parser bug described in the brief lives
 in code that is not in this copy, and the existing path also performs **no range check**.
-The new parser is therefore delivered as a standalone, drop-in replacement (see Integration).
+The coordinate parser is now integrated into the transformer and entity parser. The repository update path also protects existing positions.
 The existing pipeline also drops the storage link before the database, which is why the audit
 reads the source XML.
 
 ## Setup (macOS / Linux, isolated environment)
 
 ```bash
-python3.12 -m venv .venv          # any Python >= 3.10 works; only the standard library is used
+python3.12 -m venv .venv          # project requires Python >= 3.12, as declared in pyproject.toml
 source .venv/bin/activate
-pip install pytest
+python -m pip install pytest "sqlalchemy>=2.0.51" "geoalchemy2>=0.20.0" "shapely>=2.1.2"
 ```
 
 ## Run the tests
@@ -71,7 +74,8 @@ python -m app.mastr_quality.dry_run \
 ```
 
 `--state` is a JSON export of the stored rows (`mastr_number`, `latitude`, `longitude`).
-The tool never connects to a database. Expected fixture result:
+The tool never connects to a database. Its state format has no geometry field, so it
+cannot independently identify database rows with missing geometry. Expected fixture result:
 1 changed, 2 rejected, 2 kept (1 of them a conflict that is reported but not changed),
 1 needs review, 1 not in target, 1 without a source position.
 
@@ -112,7 +116,7 @@ The tool never connects to a database. Expected fixture result:
 
 ## Engineering note
 
-**Trade-offs.** Standard library only, so it runs without the geo stack or a database; the cost is
+**Trade-offs.** The standalone coordinate/capacity parsing and XML audit utilities use the standard library and do not connect to a database. The integrated application path imports SQLAlchemy, GeoAlchemy2, and Shapely; its synthetic tests exercise that path without opening a database. The cost is
 no spatial validation beyond ranges (no check that a point lies in Germany). The coordinate parser
 rejects ambiguous inputs instead of guessing, so some recoverable values go to "rejected" and need
 a human decision. A single dot in a capacity is read as a decimal (XML convention); a German string
@@ -126,10 +130,12 @@ link was modelled; real exports may contain further cases (units without storage
 storage objects listing units that no longer exist) that the audit counts but does not repair.
 
 **Safe integration into IRIS.**
-1. Replace the two pass-throughs in `mastr_transformer.py`
-   (`"latitude": record.get("Breitengrad")`, `"longitude": record.get("Laengengrad")`) with
-   `parse_coordinate(record.get("Breitengrad"), "lat").value` and the `"lon"` equivalent
-   (or call `to_pipeline_record`). Apply the same to the `is not None` check in `mastr_parser.py`.
+1. Coordinate validation is now integrated into `mastr_transformer.py` and
+   `mastr_parser.py`. The transformer parses both source fields and emits `None`
+   for invalid coordinates. The entity parser validates again before creating
+   geometry. The ordinary transformed record does not retain rejection reasons;
+   consult the original raw input when investigating one.
+
 2. For existing rows, export the stored table to the `--state` JSON on a **staging copy**, run the
    dry-run, and review `dry_run_report.json` (changed / rejected / conflicts / needs review).
 3. Apply only `fill` actions with a guarded update, inside a transaction, for example (documentation only):
@@ -142,11 +148,14 @@ storage objects listing units that no longer exist) that the audit counts but do
      AND t.latitude IS NULL AND t.longitude IS NULL AND t.geometry IS NULL;
    ```
    The `IS NULL` guard makes it idempotent and prevents overwriting a known position.
-4. **Review the repository update path before any re-run.** `energy_asset_repository.py` has an
-   "Update Existing MaStR Asset" method. It was not fully reviewed for this task: if it assigns the
-   incoming `latitude` / `longitude` / `geometry` unconditionally, a later load of a record with an
-   empty or rejected position could overwrite a known valid one with NULL. Guard it with the same rule
-   (only fill when the stored position is empty; never replace a valid one) as a separate change.
+4. The repository update method now guards stored positions. It fills a
+   completely empty position only when incoming latitude, longitude, and geometry
+   are all valid. A valid stored coordinate pair is never overwritten. Missing
+   geometry is filled only when incoming valid coordinates exactly match stored
+   coordinates. Partial positions and conflicting values are not auto-corrected;
+   they need separate review. Even a valid-but-outdated stored point is retained
+   until a reviewed correction is approved.
+
 5. Compare the affected-row count with the dry-run's `records_changed` before and after; take a
    backup first; do not re-import the 13,790 records.
 

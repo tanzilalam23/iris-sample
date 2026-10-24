@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timezone
 
 from app.config.paths import DataPaths
+from app.mastr_quality.coordinates import parse_coordinate
 
 
 class MaStRTransformer:
@@ -135,6 +136,9 @@ class MaStRTransformer:
         record: dict,
     ):
 
+        latitude = parse_coordinate(record.get("Breitengrad"), "lat")
+        longitude = parse_coordinate(record.get("Laengengrad"), "lon")
+
         return {
             "source": "mastr",
 
@@ -185,13 +189,9 @@ class MaStRTransformer:
                     "Flurstueck"
                 ),
 
-                "latitude": record.get(
-                    "Breitengrad"
-                ),
+                "latitude": latitude.value,
 
-                "longitude": record.get(
-                    "Laengengrad"
-                ),
+                "longitude": longitude.value,
             },
 
             "energy": {
