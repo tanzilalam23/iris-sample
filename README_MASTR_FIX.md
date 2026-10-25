@@ -1,39 +1,45 @@
-# IRIS-48H-01 — MaStR coordinate parsing and storage classification
+# IRIS-48H-01: MaStR coordinate parsing and storage classification
 
-A tested, non-destructive vertical slice. One deterministic fixture, one code path.
-No database access, no scraping, no credentials, no fabricated production coordinates.
+This is my 48-hour submission. It fixes how decimal coordinates are read, adds an audit report
+for MaStR storage records, and adds a dry-run that shows what would change without changing anything.
 
-## What this change contains (quality tools and integration updates)
+It uses synthetic data only. It doesn't touch a database, doesn't scrape anything, uses no
+credentials, and contains no real coordinates.
 
-| File | Purpose |
+## What's in this branch
+
+| File | What it does |
 |---|---|
-| `app/mastr_quality/coordinates.py` | Coordinate-only parser (dot/comma decimals, whitespace, signs, range check, reasons) |
-| `app/mastr_quality/capacity.py` | Capacity parser, kept independent from coordinates |
-| `app/mastr_quality/xml_adapter.py` | Reads MaStR bulk-export style XML into dicts, source text preserved; `to_pipeline_record()` adapter |
-| `app/mastr_quality/audit.py` | Audit by source prefix, storage link, capacity, location quality (JSON + CSV) |
-| `app/mastr_quality/dry_run.py` | Dry-run repair plan (changed / rejected / kept), idempotent, never overwrites a valid position |
-| `app/transformers/mastr_transformer.py` | Parses and validates source coordinates during transformation |
-| `app/parsers/mastr_parser.py` | Validates coordinates before creating geometry |
-| `app/database/repositories/energy_asset_repository.py` | Protects existing positions during entity updates |
-| `tests/mastr_quality/` | pytest suite (parsers, adapter, audit, dry-run, integration) |
-| `tests/fixtures/` | Synthetic XML fixtures + a synthetic "current table state" JSON |
-| `audit_sample/` | Output of the audit and dry-run on the fixtures |
-| `pytest.ini` | Makes `pytest` look only in `tests/` (the repo's top-level `test_map_renderer.py` is a manual database script) |
+| `app/mastr_quality/coordinates.py` | Reads latitude and longitude. Accepts dot or comma decimals, spaces and signs. Rejects impossible values and says why. |
+| `app/mastr_quality/capacity.py` | Reads capacity. Kept separate from coordinates on purpose. |
+| `app/mastr_quality/xml_adapter.py` | Reads MaStR-style XML into plain dicts and keeps the source text as it is. `to_pipeline_record()` turns a unit into the record shape the pipeline already uses. |
+| `app/mastr_quality/audit.py` | Counts records by source prefix, storage link, capacity and location quality (JSON and CSV). |
+| `app/mastr_quality/dry_run.py` | Plans which positions could be filled, rejected or left alone. Running it twice changes nothing, and it never overwrites a valid position. |
+| `app/transformers/mastr_transformer.py` | Now reads and checks coordinates while transforming records. |
+| `app/parsers/mastr_parser.py` | Now checks coordinates before building the map point. |
+| `app/database/repositories/energy_asset_repository.py` | Now stops an update from overwriting a stored position. |
+| `tests/mastr_quality/` | The tests: parsers, XML reader, audit, dry-run, and the changes to the existing code. |
+| `tests/fixtures/` | Made-up XML files and a made-up "current table" JSON. |
+| `audit_sample/` | Output of the audit and the dry-run on those fixtures. |
+| `pytest.ini` | Tells pytest to look only in `tests/` (the `test_map_renderer.py` in the repo root is a manual database script, not a test). |
 
-## Finding about the provided repository
+## What I found in the repository
 
-`_number()` does **not exist** in the files provided. `app/transformers/mastr_transformer.py`
-copies `Breitengrad` / `Laengengrad` unchanged and `app/parsers/mastr_parser.py` only checks
-`is not None` before building a `Point`. So the generic-parser bug described in the brief lives
-in code that is not in this copy, and the existing path also performs **no range check**.
-The coordinate parser is now integrated into the transformer and entity parser. The repository update path also protects existing positions.
-The existing pipeline also drops the storage link before the database, which is why the audit
-reads the source XML.
+`_number()` is not in the files I was given. `app/transformers/mastr_transformer.py` copies
+`Breitengrad` and `Laengengrad` as they are, and `app/parsers/mastr_parser.py` only checks for
+`is not None` before building a `Point`. So the bug from the brief is in code that isn't in this
+copy. The existing path also has **no range check**, so a latitude like 148.5 would have gone straight through.
+
+I have now connected the new coordinate parser to the transformer and the entity parser, and the
+repository update no longer overwrites a stored position.
+
+The existing pipeline also drops the storage link before the data reaches the database. That is why
+the audit reads the source XML.
 
 ## Setup (macOS / Linux, isolated environment)
 
 ```bash
-python3.12 -m venv .venv          # project requires Python >= 3.12, as declared in pyproject.toml
+python3.12 -m venv .venv          # the project needs Python >= 3.12, as declared in pyproject.toml
 source .venv/bin/activate
 python -m pip install pytest "sqlalchemy>=2.0.51" "geoalchemy2>=0.20.0" "shapely>=2.1.2"
 ```
@@ -44,7 +50,7 @@ python -m pip install pytest "sqlalchemy>=2.0.51" "geoalchemy2>=0.20.0" "shapely
 python -m pytest -v | tee test_results.txt
 ```
 
-Result of the last run is stored in `test_results.txt`.
+The result of the last run is saved in `test_results.txt`.
 
 ## Run the audit (read-only)
 
@@ -55,14 +61,16 @@ python -m app.mastr_quality.audit \
   --out-dir audit_sample
 ```
 
-Writes `audit.json`, `audit_by_prefix.csv`, `audit_units.csv`. In `audit_units.csv` an empty cell
-means NULL and a real zero is written as `0.0`.
+It writes `audit.json`, `audit_by_prefix.csv` and `audit_units.csv`. In `audit_units.csv`, an empty
+cell means NULL, and a real zero is written as `0.0`.
 
-`audit_by_prefix.csv` has one row per source prefix and a `record_type` column:
-`unit` rows (SEE, SME; columns for link status, capacity, location quality and coordinate rejection
-reasons), `storage_object` rows (SSE; columns starting `storage_`: objects, capacity status, linked
-units, objects with several units, orphans) and one `all_units` row. A blank cell means the column
-does not apply to that row type.
+`audit_by_prefix.csv` has one row per source prefix, with a `record_type` column:
+- `unit` rows (SEE, SME): link status, capacity, location quality and coordinate rejection reasons.
+- `storage_object` rows (SSE): columns starting with `storage_` (objects, capacity status, linked
+  units, objects with several units, orphans).
+- one `all_units` row with the totals.
+
+A blank cell means that column doesn't apply to that kind of row.
 
 ## Run the dry-run (writes only the report)
 
@@ -73,72 +81,77 @@ python -m app.mastr_quality.dry_run \
   --out audit_sample/dry_run_report.json
 ```
 
-`--state` is a JSON export of the stored rows (`mastr_number`, `latitude`, `longitude`).
-The tool never connects to a database. Its state format has no geometry field, so it
-cannot independently identify database rows with missing geometry. Expected fixture result:
-1 changed, 2 rejected, 2 kept (1 of them a conflict that is reported but not changed),
-1 needs review, 1 not in target, 1 without a source position.
+`--state` is a JSON export of the stored rows (`mastr_number`, `latitude`, `longitude`). The tool
+never connects to a database. The state format has no geometry field, so the dry-run can't find rows
+that are missing geometry on its own.
+
+Expected result on the fixtures: 1 changed, 2 rejected, 2 kept (1 of them a conflict that is
+reported but not changed), 1 needs review, 1 not in target, 1 without a source position.
 
 ## Rules the code follows
 
-1. **Coordinates**: `48.123` and `48,123` are 48.123 (never 48123); `-7.123`, `11,234`, `+9.1`,
-   padded text work; latitude outside ±90 or longitude outside ±180 is rejected with a reason;
-   two separators (`1,234.5`) are rejected as ambiguous instead of guessed.
-2. **Capacity** is parsed separately (it may legitimately contain thousands separators).
-3. **Zero-safe NULL**: absent/blank = missing; `0` is a value (capacity 0, latitude 0).
-4. **Source semantics**: prefix comes from the identifier (`SEE`, `SME`, `SSE`); the storage link
-   is taken from the unit record; a link whose storage object is absent is reported as
-   `dangling_link`, not as linked.
-5. **One storage object can serve many units** (fixture: `SSE9000000001` ↔ two units).
-   Capacity is attached to the storage object, so a naive per-unit sum double-counts it
-   (fixture: 11251.5 kWh naive vs 6551.0 kWh counted once). The audit reports both.
-6. **Dry-run**: a valid stored position is never replaced; a position is proposed only when both
-   source coordinates parse; rows missing from the target are reported, never inserted;
-   duplicate source IDs are not applied; planning twice after applying gives zero changes.
+1. **Coordinates.** `48.123` and `48,123` both mean 48.123 (never 48123). `-7.123`, `11,234`, `+9.1`
+   and padded text work. A latitude outside ±90 or a longitude outside ±180 is rejected with a reason.
+   Two separators (`1,234.5`) are rejected as ambiguous instead of guessed.
+2. **Capacity** is read separately, because it can legitimately have thousands separators.
+3. **Zero-safe NULL.** Absent or blank means missing. `0` is a real value (capacity 0, latitude 0).
+4. **Source semantics.** The prefix comes from the identifier (`SEE`, `SME`, `SSE`). The storage link
+   comes from the unit record. If the linked storage object isn't in the storage file, the link is
+   reported as `dangling_link`, not as linked.
+5. **One storage object can serve many units** (in the fixture, `SSE9000000001` has two units).
+   Capacity belongs to the storage object, so adding it up per unit counts it twice
+   (fixture: 11251.5 kWh that way, 6551.0 kWh counted once). The audit reports both.
+6. **Dry-run.** A valid stored position is never replaced. A position is proposed only when both
+   source coordinates parse. Rows missing from the target are reported, never inserted. Duplicate
+   source IDs are not applied. Planning a second time after applying gives zero changes.
 
-## Assumptions and open points (please read)
+## Assumptions and open points
 
-* **XML tag names** follow the MaStR Gesamtdatenexport documentation (revision 26.2, 1 October 2026):
-  units `EinheitMastrNummer`, `Breitengrad`, `Laengengrad`, `SpeMaStRNummer`; storage objects
-  `MaStRNummer`, `NutzbareSpeicherkapazitaet`, `VerknuepfteEinheitenMaStRNummern` (comma-separated
-  string; semicolons and nested elements are also tolerated). They are defined once at the top of
-  `xml_adapter.py`, and lookups ignore case. The fixture's root and record element names are
-  modelled on the export's file structure and are not used for parsing (every record directly under
-  the root is read). Re-check the tags if a later revision is used.
-* **Prefixes**: the MaStR numbering concept defines SEE (generation unit), SME (migrated unit)
-  and SSE (storage). The export documentation's own examples for storage identifiers may use a different
-  prefix (SPE). The assessment's SSE cases are kept as required; a test also covers SPE identifiers
-  with the documented tag spelling. The audit reports whatever prefix it finds and does not assume SSE only.
-* The fixture is **entirely synthetic**: invented IDs, invented positions. No MaStR records were copied.
-* The 13,790 / 8,718 figures from the brief were not reproduced (no production data was available).
-  `storage_ready_without_geometry` is the same kind of population (linked + positive capacity +
-  no precise position) computed on the fixture: 1 of 8.
+* **XML tag names** follow the MaStR Gesamtdatenexport documentation (revision 26.2, 1 October 2026).
+  Units: `EinheitMastrNummer`, `Breitengrad`, `Laengengrad`, `SpeMaStRNummer`. Storage objects:
+  `MaStRNummer`, `NutzbareSpeicherkapazitaet`, `VerknuepfteEinheitenMaStRNummern` (a comma-separated
+  string; semicolons and nested elements also work). They are defined once at the top of
+  `xml_adapter.py`, and the lookup ignores upper/lower case. The root and record element names in the
+  fixtures are modelled on the export's file structure and aren't used for parsing (every record
+  directly under the root is read). Re-check the tags if you use a later revision.
+* **Prefixes.** The MaStR numbering concept defines SEE (generation unit), SME (migrated unit) and
+  SSE (storage). The export documentation's own examples for storage identifiers may use a different
+  prefix (SPE). I kept the SSE cases the assessment asks for, and one test also covers SPE
+  identifiers with the documented tag spelling. The audit reports whatever prefix it finds and
+  doesn't assume SSE only.
+* The fixtures are **entirely synthetic**: invented IDs and invented positions. No MaStR records were copied.
+* I did not reproduce the 13,790 / 8,718 figures from the brief, because I had no production data.
+  `storage_ready_without_geometry` is the same kind of count (linked, positive capacity, no precise
+  position), computed on the fixtures: 1 of 8.
 
 ## Engineering note
 
-**Trade-offs.** The standalone coordinate/capacity parsing and XML audit utilities use the standard library and do not connect to a database. The integrated application path imports SQLAlchemy, GeoAlchemy2, and Shapely; its synthetic tests exercise that path without opening a database. The cost is
-no spatial validation beyond ranges (no check that a point lies in Germany). The coordinate parser
-rejects ambiguous inputs instead of guessing, so some recoverable values go to "rejected" and need
-a human decision. A single dot in a capacity is read as a decimal (XML convention); a German string
-using a lone dot as a thousands separator would be misread, so capacity should come from the XML,
-not from formatted display text.
+**Trade-offs.** The coordinate and capacity parsing and the XML audit use only the standard library
+and never connect to a database. The parts that plug into IRIS import SQLAlchemy, GeoAlchemy2 and
+Shapely, and their tests run without opening a database.
 
-**Source and licence.** MaStR data is published under the Datenlizenz Deutschland — Namensnennung 2.0
-(attribution required). This repository ships only synthetic data. XML is read with the stdlib
-parser, which is fine for trusted files; use `defusedxml` for untrusted input. A single 1-to-many
-link was modelled; real exports may contain further cases (units without storage objects,
-storage objects listing units that no longer exist) that the audit counts but does not repair.
+The cost of keeping it simple: there is no spatial check beyond the ranges (nothing checks that a
+point is in Germany). The coordinate parser rejects ambiguous values instead of guessing, so some
+values that could be recovered end up as "rejected" and need a person to decide. A single dot in a
+capacity is read as a decimal point, because that is how the XML writes it. A German value that
+uses a lone dot as a thousands separator would be misread, so capacity should come from the XML and
+not from formatted text.
+
+**Source and licence.** MaStR data is published under the Datenlizenz Deutschland, Namensnennung 2.0
+(attribution required). This repository contains only synthetic data. The XML is read with the
+standard library parser, which is fine for trusted files; use `defusedxml` for untrusted input. I
+modelled a single 1-to-many link. Real exports may have other cases (units without storage objects,
+storage objects that list units that no longer exist). The audit counts those but doesn't repair them.
 
 **Safe integration into IRIS.**
-1. Coordinate validation is now integrated into `mastr_transformer.py` and
-   `mastr_parser.py`. The transformer parses both source fields and emits `None`
-   for invalid coordinates. The entity parser validates again before creating
-   geometry. The ordinary transformed record does not retain rejection reasons;
-   consult the original raw input when investigating one.
-
+1. Coordinate checks are now part of `mastr_transformer.py` and `mastr_parser.py`. The transformer
+   parses both source fields and outputs `None` for any invalid coordinate. The entity parser checks
+   them again before it creates geometry. The transformed record doesn't keep the rejection reason,
+   so when you investigate one, look at the original raw input.
 2. For existing rows, export the stored table to the `--state` JSON on a **staging copy**, run the
-   dry-run, and review `dry_run_report.json` (changed / rejected / conflicts / needs review).
-3. Apply only `fill` actions with a guarded update, inside a transaction, for example (documentation only):
+   dry-run, and review `dry_run_report.json` (changed, rejected, conflicts, needs review).
+3. Apply only the `fill` actions, with a guarded update inside a transaction. For example
+   (documentation only):
    ```sql
    UPDATE iris_core.energy_assets t
    SET latitude = s.latitude, longitude = s.longitude,
@@ -147,18 +160,15 @@ storage objects listing units that no longer exist) that the audit counts but do
    WHERE t.mastr_number = s.mastr_number
      AND t.latitude IS NULL AND t.longitude IS NULL AND t.geometry IS NULL;
    ```
-   The `IS NULL` guard makes it idempotent and prevents overwriting a known position.
-4. The repository update method now guards stored positions. It fills a
-   completely empty position only when incoming latitude, longitude, and geometry
-   are all valid. A valid stored coordinate pair is never overwritten. Missing
-   geometry is filled only when incoming valid coordinates exactly match stored
-   coordinates. Partial positions and conflicting values are not auto-corrected;
-   they need separate review. Even a valid-but-outdated stored point is retained
-   until a reviewed correction is approved.
+   The `IS NULL` guard makes it safe to run again and stops it from overwriting a known position.
+4. The repository update method now guards stored positions. It fills a completely empty position
+   only when the incoming latitude, longitude and geometry are all valid. A valid stored coordinate
+   pair is never overwritten. Missing geometry is filled only when the incoming valid coordinates
+   exactly match the stored ones. Partial positions and conflicting values are left alone and need a
+   separate review. Even a valid but outdated stored point stays until a reviewed correction is approved.
+5. Compare the affected-row count with the dry-run's `records_changed` before and after. Take a
+   backup first. Do not re-import the 13,790 records.
 
-5. Compare the affected-row count with the dry-run's `records_changed` before and after; take a
-   backup first; do not re-import the 13,790 records.
-
-**Not done / out of scope.** No national backfill, no production access, no geocoding, no storage-link
-column in `energy_assets` (the table has none; adding one is a separate migration decision),
-no verification against real export files.
+**Not done / out of scope.** No national backfill, no production access, no geocoding, and no
+storage-link column in `energy_assets` (the table doesn't have one; adding it is a separate
+migration decision). I did not check anything against real export files.
